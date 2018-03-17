@@ -1,0 +1,5 @@
+pip>=9.0.1
+setuptools>=28.8.0
+pyyaml>=3.12,<4
+RPi.GPIO==0.6.1
+spidev >=3.2

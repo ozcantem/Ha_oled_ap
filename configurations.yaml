@@ -1,0 +1,10 @@
+application:
+  ha_api_url: https://***************/api/states?
+  api_password: *******
+  font: conthrax-sb
+
+raspberry_pi:
+  rst: 24
+  dc: 23
+  bus: 0
+  device: 0

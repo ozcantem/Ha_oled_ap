@@ -23,16 +23,26 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
+try:
+    with open(os.path.dirname(os.path.realpath(__file__)) +"/configurations.yaml", 'r') as ymlfile:
+        config = yaml.load(ymlfile)
+        API_URL = config['application']['ha_api_url']
+        API_PASS = config['application']['api_password']
+        FONT = config['application']['font']
+        # Raspberry pi pin settings
+        RST = config['raspberry_pi']['rst']
+        DC = config['raspberry_pi']['dc']
+        bus = config['raspberry_pi']['bus']
+        device = config['raspberry_pi']['device']
+
+except Exception as er:
+    print (er)
+    logger.error(str(er))
+
 # create the custom font
-font_dir = os.path.dirname(os.path.realpath(__file__)) +"/conthrax-sb.ttf"
+font_dir = os.path.dirname(os.path.realpath(__file__)) + "/" +FONT+".ttf"
 font1 = ImageFont.truetype(font_dir, 10)
 font2 = ImageFont.truetype(font_dir, 20)
-
-# Raspberry pi pin settings
-RST = 24
-DC = 23
-bus = 0
-device = 0
 
 # 128x64 display with hardware SPI:
 disp = SSD1306.SSD1306(RST, DC, SPI.SpiDev(bus, device))
@@ -44,7 +54,6 @@ disp.begin()
 disp.clear()
 disp.display()
 
-ha_api_url = ''
 ha_attributes = {}
 ha_attributes_entity = []
 ha_attributes_state = []
@@ -75,26 +84,16 @@ def retrieve_information(seconds):
 
 def stop_loop(loop):
     print('stopping loop')
+    logger.info("Stopping loop")
     draw.rectangle((0, 0, width, height), outline=0, fill=0)
     disp.clear()
     disp.display()
     loop.stop()
-
-
-def get_configuration_data():
-    try:
-        with open(os.path.dirname(os.path.realpath(__file__)) +"/configurations.yaml", 'r') as ymlfile:
-            config = yaml.load(ymlfile)
-        global  ha_api_url
-        ha_api_url = config['application']['ha_api_url']
-
-    except Exception as er:
-        print (er)
-        logger.error(str(er))
+    logger.info("Loop stopped")
 
 
 def get_states_from_ha():
-    response = urlopen(ha_api_url)
+    response = urlopen(API_URL+"api_password="+API_PASS)
     string = response.read().decode('utf-8')
     json_obj = json.loads(string)
     global ha_attributes
@@ -108,24 +107,21 @@ def display_information(seconds):
     for i in range(ha_attributes.__len__()):
         # Draw a black filled box to clear the image.
         draw.rectangle((0, 0, width, height), outline=0, fill=0)
-
         draw.text((x, top), str(ha_attributes_entity[i]), font=font1, fill=255)
         draw.text((x, top + 20), str( ha_attributes_state[i]), font=font2, fill=255)
         disp.image(image)
         disp.display()
         time.sleep(5)
-
     loop.call_later(seconds, lambda : display_information(seconds))
 
 
 if __name__ == '__main__':
-    print('Starting')
-    logger.info("Starting")
-    get_configuration_data()
+    print('Application starting')
+    logger.info("Application starting")
     loop = asyncio.get_event_loop()
     loop.call_soon(lambda: retrieve_information(15))
     loop.call_later(1, lambda : display_information(5))
     loop.add_signal_handler(signal.SIGINT, stop_loop, loop)
     loop.run_forever()
-    print('Exiting')
-    logger.info("Exiting")
+    print('Application stopped')
+    logger.info("Application stopped")
